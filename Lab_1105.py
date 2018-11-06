@@ -30,6 +30,7 @@ nltk.download('averaged_perceptron_tagger')
 
 def gettingFeatures(plainText):
         print("hello from github!")
+	print("hello from yuan!")
         plainText = plainText.lower()
         syllables = textstat.syllable_count(plainText)
         sentences = textstat.sentence_count(plainText)
