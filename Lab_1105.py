@@ -1,15 +1,3 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
-pip install textstat
-
-
-# In[2]:
-
-
 import numpy as np
 import re
 from sklearn.externals import joblib
@@ -23,9 +11,6 @@ from nltk.tokenize import sent_tokenize
 from nltk.tokenize import WordPunctTokenizer
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
-
-
-# In[4]:
 
 
 def gettingFeatures(plainText):
