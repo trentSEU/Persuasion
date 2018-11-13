@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# coding: utf-8
 import numpy as np
 import re
 from sklearn.externals import joblib
@@ -9,9 +11,15 @@ import xlrd
 import pandas as pd
 from nltk.tokenize import sent_tokenize
 from nltk.tokenize import WordPunctTokenizer
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
+import json
+# nltk.download('punkt')
+# nltk.download('averaged_perceptron_tagger')
 
+
+# In[4]:
+
+LIWC_JSON =  open("LIWC.json",'r')
+LIWC = json.load(LIWC_JSON)
 
 def gettingFeatures(plainText):
         plainText = plainText.lower()
@@ -48,7 +56,8 @@ def gettingFeatures(plainText):
         for (k, v) in mapping:
             plainText = plainText.replace(k, v)
         
-        punctuation = "!#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~"
+        # replace all the punctuations with empty space
+        punctuation = "!#$%&()*+,-./:;<=>?@[\\]^_`{|}~"
         for p in punctuation:
             if p != '\'':
                 plainText = plainText.replace(p, ' ')
@@ -68,6 +77,17 @@ def gettingFeatures(plainText):
         while text.count(''): text.remove('')
 #         print(str(text))
 
+        wordsWithNumbers = []
+        # check all the words
+        for word in text:
+            # check the current word
+            for character in word:
+                if character.isdigit():
+                    wordsWithNumbers.append(word)
+                    break
+
+        return wordsWithNumbers
+        
 	#words / syllables / sentences count
         wordCount = len(plainText.split()) 
         
@@ -161,10 +181,20 @@ def gettingFeatures(plainText):
         #percept = 0 #LIWC Analysis
         #Verbs past focus VBD VBN
         focuspast = 0
-        focuspast = len([ (x,y) for x, y in result if y  == "VBN" or y  == "VBD"])/wordCount
+        focuspast_list = []
+        LIWC_focus_past = LIWC["Past"]
+        for word in text:
+            if word in LIWC_focus_past:
+                focuspast_list.append(word)
+        focuspast = len(focuspast_list)/wordCount
         #Verbs present focus VB VBP VBZ VBG
         focuspresent = 0
-        focuspast = len([ (x,y) for x, y in result if y  == "VB" or y  == "VBP" or y  == "VBZ" or y  == "VBG"])/wordCount
+        focuspresent_list = []
+        LIWC_focus_present = LIWC["Present"]
+        for word in text:
+            if word in LIWC_focus_present:
+                focuspresent_list.append(word)
+        focuspresent = len(focuspresent_list)/wordCount
         #net speak
         #netspeak = 0 #LIWC Analysis
         #Assent
@@ -176,9 +206,9 @@ def gettingFeatures(plainText):
         return [wordCount, readabilityScore, ReadabilityGrade, DiractionCount, WPS, Sixltr, pronoun, ppron, i, you, ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth, Exemplify]
 
 
-# In[5]:
+# In[9]:
 
-
+# print("here\n")
 xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
 df1 = xls.sheet_by_name('nppersuasive')
 df2 = xls.sheet_by_name('persuasive')
@@ -221,22 +251,32 @@ cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DiractionCount', '
 # text = plainText.split(" ")
 # text
 
-# In[7]:
+# In[10]:
 
 
-text1 = df1.col_values(0)
-text1 = text1[1:]
-df_np = []
-for text in text1:
-    df_np.append(gettingFeatures(text))
+# textP = df1.col_values(0)
+# textP = textP[1:]
+# wordsWithNumbers = []
+# for text in textP:
+#     wordsWithNumbers.extend(gettingFeatures(text))
 
+# for word in wordsWithNumbers:
+#     for character in word:
+#         if not character.isdigit():
+#             print(word)
+#             break
 
-# In[19]:
+# for word in wordsWithNumbers:
+#     if '\'' in word:
+#         print(word + " ")
 
+# for word in wordsWithNumbers:
+#     if 'lbs' in word:
+#         print(word + " ")
 
-import re
-for i in text1:
-    print (re.findall('\d+', i ))
+# In[16]:
+
+# print(wrodsContainsNumber)
 
 
 # punctuation = '''!#$%&()*+,-./:;<=>?@[\\]^_`{|}~'''
@@ -282,46 +322,52 @@ for i in text1:
 # In[9]:
 
 
-df_np=pd.DataFrame(df_np).T
-df_np=pd.DataFrame(df_np).T
-df_np.columns = cols
-df_np
+# df_np=pd.DataFrame(df_np).T
+# df_np=pd.DataFrame(df_np).T
+# df_np.columns = cols
+# df_np
 
 
-# In[10]:
+# # In[10]:
 
 
-text2 = df2.col_values(0)
-text2 = text2[1:]
-df_p = []
-for text in text2:
-    df_p.append(gettingFeatures(str(text)))
+# text2 = df2.col_values(0)
+# text2 = text2[1:]
+# df_p = []
+# for text in text2:
+#     df_p.append(gettingFeatures(str(text)))
 
 
-# In[13]:
+# # In[13]:
 
 
-df_p=pd.DataFrame(df_p).T
-df_p=pd.DataFrame(df_p).T
-df_p.columns = cols
-df_p
+# df_p=pd.DataFrame(df_p).T
+# df_p=pd.DataFrame(df_p).T
+# df_p.columns = cols
+# df_p
 
 
-# In[111]:
+# # In[111]:
 
 
-#df_2
+# #df_2
 
 
-# In[58]:
+# # In[58]:
 
 
-writer = pd.ExcelWriter('output_1101.xlsx', engine='xlsxwriter')
+# writer = pd.ExcelWriter('output_1101.xlsx', engine='xlsxwriter')
 
-# Convert the dataframe to an XlsxWriter Excel object.
-df_np.to_excel(writer, sheet_name='npper', index =False ,header=True)
-df_p.to_excel(writer, sheet_name='pper', index =False ,header=True)
-# Close the Pandas Excel writer and output the Excel file.
+# # Convert the dataframe to an XlsxWriter Excel object.
+# df_np.to_excel(writer, sheet_name='npper', index =False ,header=True)
+# df_p.to_excel(writer, sheet_name='pper', index =False ,header=True)
+# # Close the Pandas Excel writer and output the Excel file.
 
-writer.save()
+# writer.save()
+
+
+# In[ ]:
+
+
+
 
