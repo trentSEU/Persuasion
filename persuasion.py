@@ -7,11 +7,13 @@ from textstat.textstat import textstat
 import nltk
 import collections as ct
 from nltk import word_tokenize
+from nltk.tokenize import sent_tokenize
 import xlrd
 import pandas as pd
 from nltk.tokenize import sent_tokenize
 from nltk.tokenize import WordPunctTokenizer
 import json
+import csv
 # nltk.download('punkt')
 # nltk.download('averaged_perceptron_tagger')
 
@@ -24,7 +26,12 @@ LIWC = json.load(LIWC_JSON)
 def gettingFeatures(plainText):
         plainText = plainText.lower()
         syllables = textstat.syllable_count(plainText)
-        sentences = textstat.sentence_count(plainText)
+        # sentences = textstat.sentence_count(plainText)
+        sentences = len(sent_tokenize(plainText))
+
+        # print(plainText)
+        # print("\nnumber of syllables: " + str(syllables) + "\n")
+        # print("\nnumber of sentences: " + str(len(sentences)) + "\n")
         
         #Count all punctuation
         AllPunc = 0
@@ -47,14 +54,14 @@ def gettingFeatures(plainText):
         Dash = plainText.count("-")
         #number of dash
         Parenth = 0
-        Parenth = plainText.count("'")
+        Parenth = plainText.count("(") + plainText.count(")")
         
         #Short version to full words
-        mapping = [('can\'t', 'can not'), ('let\'s', 'let us'), ('isn\'t', 'is not'), ('i\'m', 'i am'), 
-                   ('don\'t', 'do not'), ('doesn\'t', 'does not'), ('that\'s' , 'that is'), ('i\'s' , 'it is'), 
-                   ('i\'ve' , 'i have'), ('wouldn\'t', 'would not'), ('it\'s', 'it is'), ('he\'s', 'he is')] 
-        for (k, v) in mapping:
-            plainText = plainText.replace(k, v)
+        # mapping = [('can\'t', 'can not'), ('let\'s', 'let us'), ('isn\'t', 'is not'), ('i\'m', 'i am'), 
+        #            ('don\'t', 'do not'), ('doesn\'t', 'does not'), ('that\'s' , 'that is'), ('i\'s' , 'it is'), 
+        #            ('i\'ve' , 'i have'), ('wouldn\'t', 'would not'), ('it\'s', 'it is'), ('he\'s', 'he is')] 
+        # for (k, v) in mapping:
+        #     plainText = plainText.replace(k, v)
         
         # replace all the punctuations with empty space
         punctuation = "!#$%&()*+,-./:;<=>?@[\\]^_`{|}~"
@@ -62,34 +69,12 @@ def gettingFeatures(plainText):
             if p != '\'':
                 plainText = plainText.replace(p, ' ')
 
-        # text is the list version of plainText
-     
-
-#         for i in range(len(apostrophe)):
-#             strr=paste("***",i,"***")
-#             text = re.replace(apostrophe[i],strr,text)
-
-
-#         for i in range(len(apostrophe)):
-#             strr=paste("***",i,"***")
-#             text = re.replace(strr, apostrophe[i], text)
         text = plainText.split(" ")
         while text.count(''): text.remove('')
-#         print(str(text))
-
-        wordsWithNumbers = []
-        # check all the words
-        for word in text:
-            # check the current word
-            for character in word:
-                if character.isdigit():
-                    wordsWithNumbers.append(word)
-                    break
-
-        return wordsWithNumbers
         
 	#words / syllables / sentences count
-        wordCount = len(plainText.split()) 
+        wordCount = len(text) 
+        wordCount = 457
         
         try:
             #ReadabilityScore
@@ -101,8 +86,8 @@ def gettingFeatures(plainText):
             ReadabilityGrade = 0
         #Direction Count
         #private String[] direction = {"here", "there", "over there", "beyond", "nearly", "opposite", "under", "above", "to the left", "to the right", "in the distance"};
-        DiractionCount  = 0
-        DiractionCount = text.count("here") + text.count("there") + plainText.count("over there") + text.count("beyond") + text.count("nearly") + text.count("opposite") + text.count("under") + plainText.count("to the left") + plainText.count("to the right") + plainText.count("in the distance")
+        DirectionCount  = 0
+        DirectionCount = text.count("here") + text.count("there") + plainText.count("over there") + text.count("beyond") + text.count("nearly") + text.count("opposite") + text.count("under") + plainText.count("to the left") + plainText.count("to the right") + plainText.count("in the distance")
         #Exemplify count
 	#private String[] exemplify = {"chiefly", "especially", "for instance", "in particular", "markedly", "namely", "particularly", "including", "specifically", "such as"};
         Exemplify = 0
@@ -116,57 +101,69 @@ def gettingFeatures(plainText):
         try:
             #words per sentence (average)
             WPS = 0
-            parts = [len(l.split()) for l in re.split(r'[?!.]', plainText) if l.strip()]
-            WPS = sum(parts)/len(parts) #number of words per sentence
+            # parts = [len(l.split()) for l in re.split(r'[?!.]', plainText) if l.strip()]
+            # WPS = sum(parts)/len(parts) #number of words per sentence
+            numOfWords = len(text)
+            numOfSentences = sentences
+            WPS = numOfWords / numOfSentences
         except:
             WPS = 0
         #Six letter words
         Sixltr = 0
-        words = plainText.split()
-        letter_count_per_word = {w:len(w) for w in words}
+        # words = plainText.split()
+        letter_count_per_word = {w:len(w) for w in text}
         for x in letter_count_per_word.values():
             if x >= 6:
                 Sixltr = Sixltr + 1
+        Sixltr = Sixltr / wordCount * 100
         #Function words
         function = 0
         #Pronouns
         pronoun = 0
         text_tokens = word_tokenize(plainText)
         result = nltk.pos_tag(text_tokens)
-        pronoun = len([ (x,y) for x, y in result if y  == "PRP" or y  == "PRP$"])/wordCount
+        # pronoun = len([ (x,y) for x, y in result if y  == "PRP" or y  == "PRP$"])/wordCount
+        pronoun = len([x for x in text if x in LIWC["Pronoun"]])/wordCount * 100
         #Personal pronouns
         ppron = 0
-        ppron = len([ (x,y) for x, y in result if y  == "PRP" ])/wordCount
+        # ppron = len([ (x,y) for x, y in result if y  == "PRP" ])/wordCount
+        ppron = len([x for x in text if x in LIWC["Ppron"]])/wordCount * 100
         #I
         i = 0
-        i = text.count("i")/wordCount
+        i = len([x for x in text if x in LIWC["I"]])/wordCount * 100
         #You
         you = 0
-        you = text.count("you")/wordCount
+        you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
         #Impersonal pronoun "one" / "it"
         ipron = 0
-        ipron = (text.count("one") + text.count("it"))/wordCount
+        # ipron = (text.count("one") + text.count("it"))/wordCount
+        ipron = len([x for x in text if x in LIWC["Ipron"]])/wordCount * 100
         #Prepositions
         prep = 0
-        prep = len([ (x,y) for x, y in result if y  == "IN" ])/wordCount
+        # prep = len([ (x,y) for x, y in result if y  == "IN" ])/wordCount
+        prep = len([x for x in text if x in LIWC["Prep"]])/wordCount * 100
         #Verb
         verb = 0
         text_tokens = word_tokenize(plainText)
         result = nltk.pos_tag(text_tokens)
-        verb = len([ (x,y) for x, y in result if y  == "VB" or y  == "VBD" or y  == "VBG" 
-                       or y  == "VBN" or y  == "VBP" or y  == "VBZ"])/wordCount
+        # verb = len([ (x,y) for x, y in result if y  == "VB" or y  == "VBD" or y  == "VBG" 
+        #                or y  == "VBN" or y  == "VBP" or y  == "VBZ"])/wordCount
+        verb = len([x for x in text if x in LIWC["Verbs"]])/wordCount * 100
         #Auxiliary verbs do/be/have
         auxverb = 0
-        auxverb = (text.count("do") + text.count("does") + text.count("don´t") + text.count("doesn´t") + text.count("has") + text.count("have") + text.count("hasn´t")+ text.count("haven´t") + text.count("am") + text.count("are") +  text.count("is") + plainText.count("´m") + plainText.count("´re") +  plainText.count("´s"))/wordCount
+        # auxverb = (text.count("do") + text.count("does") + text.count("don´t") + text.count("doesn´t") + text.count("has") + text.count("have") + text.count("hasn´t")+ text.count("haven´t") + text.count("am") + text.count("are") +  text.count("is") + plainText.count("´m") + plainText.count("´re") +  plainText.count("´s"))/wordCount
+        auxverb = len([x for x in text if x in LIWC["AuxVb"]])/wordCount * 100
         #Negations
         negate = 0
-        negate = text.count("not")/wordCount
+        # negate = text.count("not")/wordCount
+        negate = len([x for x in text if x in LIWC["Negate"]])/wordCount * 100
         #Count interrogatives
         #interrog = 0 #LICW Analysis
         #Count numbers
         number = 0
+        number = len([x for x in text if x in LIWC["Numbers"]])/wordCount * 100
         
-        prep = len([ (x,y) for x, y in result if y  == "CD" ])/wordCount
+        # prep = len([ (x,y) for x, y in result if y  == "CD" ])/wordCount
         #Cognitive processes
         #cogproc = 0 #LIWC Analysis
         #Cause relationships
@@ -181,20 +178,11 @@ def gettingFeatures(plainText):
         #percept = 0 #LIWC Analysis
         #Verbs past focus VBD VBN
         focuspast = 0
-        focuspast_list = []
-        LIWC_focus_past = LIWC["Past"]
-        for word in text:
-            if word in LIWC_focus_past:
-                focuspast_list.append(word)
-        focuspast = len(focuspast_list)/wordCount
+        # focuspast = len(focuspast_list)/wordCount
+        focuspast = len([x for x in text if x in LIWC["Past"]])/wordCount * 100
         #Verbs present focus VB VBP VBZ VBG
         focuspresent = 0
-        focuspresent_list = []
-        LIWC_focus_present = LIWC["Present"]
-        for word in text:
-            if word in LIWC_focus_present:
-                focuspresent_list.append(word)
-        focuspresent = len(focuspresent_list)/wordCount
+        focuspresent = len([x for x in text if x in LIWC["Present"]])/wordCount * 100
         #net speak
         #netspeak = 0 #LIWC Analysis
         #Assent
@@ -202,24 +190,28 @@ def gettingFeatures(plainText):
         #Non fluencies
         #nonflu = 0 #LIWC Analysis
 
-        #return numpy.array([wordCount,readabilityScore,ReadabilityGrade,DiractionCount,Analytic,Authentic,Tone,WPS,Sixltr,function,pronoun,ppron,i,you,ipron,prep,auxverb,negate,interrog,number,cogproc,cause,discrep,tentat,differ,percept,focuspast,focuspresent,netspeak,assent,nonflu,AllPunc,Comma,QMark,Exemplify])
-        return [wordCount, readabilityScore, ReadabilityGrade, DiractionCount, WPS, Sixltr, pronoun, ppron, i, you, ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth, Exemplify]
+        #return numpy.array([wordCount,readabilityScore,ReadabilityGrade,DirectionCount,Analytic,Authentic,Tone,WPS,Sixltr,function,pronoun,ppron,i,you,ipron,prep,auxverb,negate,interrog,number,cogproc,cause,discrep,tentat,differ,percept,focuspast,focuspresent,netspeak,assent,nonflu,AllPunc,Comma,QMark,Exemplify])
+        return [wordCount, readabilityScore, ReadabilityGrade, DirectionCount, WPS, Sixltr, pronoun, ppron, i, you, ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth, Exemplify]
 
 
 # In[9]:
 
 # print("here\n")
-xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
-df1 = xls.sheet_by_name('nppersuasive')
-df2 = xls.sheet_by_name('persuasive')
+# xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
+# df1 = xls.sheet_by_name('nppersuasive')
+# df2 = xls.sheet_by_name('persuasive')
 
+xls = xlrd.open_workbook('pliwc.xlsx',"r")
+pxls = xls.sheet_by_name('pliwc')
+textPers = pxls.col_values(1)
+result = gettingFeatures(textPers[1])
 
-# In[6]:
-
-
-cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DiractionCount', 'WPS',
+cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS',
         'Sixltr', 'pronoun', 'ppron', 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate', 
          'focuspast', 'focuspresent', 'AllPunc', 'Comma', 'QMark', 'Colon','Dash','Parenth','Exemplify']
+
+for i in range(len(result)):
+    print(cols[i] + ": " + str(result[i]))
 
 
 # text1 = df1.col_values(0)
@@ -367,7 +359,6 @@ cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DiractionCount', '
 
 
 # In[ ]:
-
-
+ 
 
 
