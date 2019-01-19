@@ -20,7 +20,7 @@ import csv
 
 # In[4]:
 
-LIWC_JSON =  open("LIWC.json",'r')
+LIWC_JSON =  open("LIWC_Lower_i.json",'r')
 LIWC = json.load(LIWC_JSON)
 
 def gettingFeatures(plainText):
@@ -40,6 +40,7 @@ def gettingFeatures(plainText):
         cd = {c:val for c, val in ct.Counter(plainText).items() if c in punc}
         for x in cd.values():
             AllPunc = AllPunc + x
+        
         #number of commas
         Comma = 0
         Comma = plainText.count(",")
@@ -69,12 +70,15 @@ def gettingFeatures(plainText):
             if p != '\'':
                 plainText = plainText.replace(p, ' ')
 
+        # '\n' would affect the result -> '\n'i, where i is the first word in a paragraph
+        plainText = plainText.replace('\n', ' ')
+        plainText = plainText.replace('\t', ' ')
         text = plainText.split(" ")
         while text.count(''): text.remove('')
         
 	#words / syllables / sentences count
-        wordCount = len(text) 
-        wordCount = 457
+        wordCount = len(text)
+        wordCount = 887
         
         try:
             #ReadabilityScore
@@ -84,6 +88,13 @@ def gettingFeatures(plainText):
         except:
             readabilityScore = 0
             ReadabilityGrade = 0
+        #Punctuations
+        AllPunc = AllPunc / wordCount * 100
+        Comma = Comma / wordCount * 100
+        QMark  =QMark / wordCount * 100
+        Colon = Colon / wordCount * 100
+        Dash = Dash / wordCount * 100
+        Parenth = Parenth / wordCount * 100
         #Direction Count
         #private String[] direction = {"here", "there", "over there", "beyond", "nearly", "opposite", "under", "above", "to the left", "to the right", "in the distance"};
         DirectionCount  = 0
@@ -120,8 +131,6 @@ def gettingFeatures(plainText):
         function = 0
         #Pronouns
         pronoun = 0
-        text_tokens = word_tokenize(plainText)
-        result = nltk.pos_tag(text_tokens)
         # pronoun = len([ (x,y) for x, y in result if y  == "PRP" or y  == "PRP$"])/wordCount
         pronoun = len([x for x in text if x in LIWC["Pronoun"]])/wordCount * 100
         #Personal pronouns
@@ -130,14 +139,14 @@ def gettingFeatures(plainText):
         ppron = len([x for x in text if x in LIWC["Ppron"]])/wordCount * 100
         #I
         i = 0
-        i = len([x for x in text if x in LIWC["I"]])/wordCount * 100
+        i = len([x for x in text if x in LIWC["i"]])/wordCount * 100
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
         #Impersonal pronoun "one" / "it"
         ipron = 0
         # ipron = (text.count("one") + text.count("it"))/wordCount
-        ipron = len([x for x in text if x in LIWC["Ipron"]])/wordCount * 100
+        ipron = len([x for x in text if x in LIWC["ipron"]])/wordCount * 100
         #Prepositions
         prep = 0
         # prep = len([ (x,y) for x, y in result if y  == "IN" ])/wordCount
@@ -196,15 +205,14 @@ def gettingFeatures(plainText):
 
 # In[9]:
 
-# print("here\n")
-# xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
-# df1 = xls.sheet_by_name('nppersuasive')
-# df2 = xls.sheet_by_name('persuasive')
+xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
+df1 = xls.sheet_by_name('nppersuasive')
+df2 = xls.sheet_by_name('persuasive')
 
 xls = xlrd.open_workbook('pliwc.xlsx',"r")
 pxls = xls.sheet_by_name('pliwc')
 textPers = pxls.col_values(1)
-result = gettingFeatures(textPers[1])
+result = gettingFeatures(textPers[34])
 
 cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS',
         'Sixltr', 'pronoun', 'ppron', 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate', 
@@ -212,6 +220,4 @@ cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', '
 
 for i in range(len(result)):
     print(cols[i] + ": " + str(result[i]))
- 
-
 
