@@ -20,7 +20,7 @@ import csv
 
 # In[4]:
 
-LIWC_JSON =  open("LIWC_Lower_i.json",'r')
+LIWC_JSON =  open("LIWC2015_Lower_i.json",'r')
 LIWC = json.load(LIWC_JSON)
 
 def gettingFeatures(plainText):
@@ -143,6 +143,8 @@ def gettingFeatures(plainText):
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
+        print([x for x in text if x in LIWC["You"]])
+        print()
         #Impersonal pronoun "one" / "it"
         ipron = 0
         # ipron = (text.count("one") + text.count("it"))/wordCount
@@ -157,11 +159,11 @@ def gettingFeatures(plainText):
         result = nltk.pos_tag(text_tokens)
         # verb = len([ (x,y) for x, y in result if y  == "VB" or y  == "VBD" or y  == "VBG" 
         #                or y  == "VBN" or y  == "VBP" or y  == "VBZ"])/wordCount
-        verb = len([x for x in text if x in LIWC["Verbs"]])/wordCount * 100
+        verb = len([x for x in text if x in LIWC["Verb"]])/wordCount * 100
         #Auxiliary verbs do/be/have
         auxverb = 0
         # auxverb = (text.count("do") + text.count("does") + text.count("don´t") + text.count("doesn´t") + text.count("has") + text.count("have") + text.count("hasn´t")+ text.count("haven´t") + text.count("am") + text.count("are") +  text.count("is") + plainText.count("´m") + plainText.count("´re") +  plainText.count("´s"))/wordCount
-        auxverb = len([x for x in text if x in LIWC["AuxVb"]])/wordCount * 100
+        auxverb = len([x for x in text if x in LIWC["Auxverb"]])/wordCount * 100
         #Negations
         negate = 0
         # negate = text.count("not")/wordCount
@@ -170,7 +172,7 @@ def gettingFeatures(plainText):
         #interrog = 0 #LICW Analysis
         #Count numbers
         number = 0
-        number = len([x for x in text if x in LIWC["Numbers"]])/wordCount * 100
+        number = len([x for x in text if x in LIWC["Number"]])/wordCount * 100
         
         # prep = len([ (x,y) for x, y in result if y  == "CD" ])/wordCount
         #Cognitive processes
@@ -188,10 +190,10 @@ def gettingFeatures(plainText):
         #Verbs past focus VBD VBN
         focuspast = 0
         # focuspast = len(focuspast_list)/wordCount
-        focuspast = len([x for x in text if x in LIWC["Past"]])/wordCount * 100
+        focuspast = len([x for x in text if x in LIWC["FocusPast"]])/wordCount * 100
         #Verbs present focus VB VBP VBZ VBG
         focuspresent = 0
-        focuspresent = len([x for x in text if x in LIWC["Present"]])/wordCount * 100
+        focuspresent = len([x for x in text if x in LIWC["FocusPresent"]])/wordCount * 100
         #net speak
         #netspeak = 0 #LIWC Analysis
         #Assent
