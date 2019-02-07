@@ -2,6 +2,7 @@
 # coding: utf-8
 import numpy as np
 import re
+<<<<<<< HEAD
 import json
 import csv
 import string
@@ -50,6 +51,30 @@ def tokenize(text):
         # stems.append(PorterStemmer().stem(item))
         lemmas.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
     return lemmas
+=======
+from sklearn.externals import joblib
+from textstat.textstat import textstat
+import nltk
+import collections as ct
+from nltk import word_tokenize
+from nltk.tokenize import sent_tokenize
+import xlrd
+import pandas as pd
+from nltk.tokenize import sent_tokenize
+from nltk.tokenize import WordPunctTokenizer
+import json
+import csv
+# nltk.download('punkt')
+# nltk.download('averaged_perceptron_tagger')
+
+
+# In[4]:
+
+LIWC_JSON =  open("LIWC2015_Lower_i.json",'r')
+LIWC = json.load(LIWC_JSON)
+
+
+>>>>>>> a1431cc6ca3e1752670e6055e9db8987f0af4cf3
 
 def gettingFeatures(plainText):
         plainText = plainText.lower()
@@ -171,8 +196,13 @@ def gettingFeatures(plainText):
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
+<<<<<<< HEAD
         # print([x for x in text if x in LIWC["You"]])
         # print()
+=======
+        print([x for x in text if x in LIWC["You"]])
+        print()
+>>>>>>> a1431cc6ca3e1752670e6055e9db8987f0af4cf3
         #Impersonal pronoun "one" / "it"
         ipron = 0
         # ipron = (text.count("one") + text.count("it"))/wordCount
@@ -202,6 +232,8 @@ def gettingFeatures(plainText):
         number = 0
         number = len([x for x in text if x in LIWC["Number"]])/wordCount * 100
         
+<<<<<<< HEAD
+=======
         ## transitional words
         transitional_words = 0
         sum_t = 0
@@ -374,6 +406,7 @@ def gettingFeatures(plainText):
             sub_sum = plainText.count(i)+ sub_sum 
         summarizing = (sub_sum/wordCount) * 100       
         
+>>>>>>> a1431cc6ca3e1752670e6055e9db8987f0af4cf3
         # prep = len([ (x,y) for x, y in result if y  == "CD" ])/wordCount
         #Cognitive processes
         #cogproc = 0 #LIWC Analysis
@@ -394,6 +427,7 @@ def gettingFeatures(plainText):
         #Verbs present focus VB VBP VBZ VBG
         focuspresent = 0
         focuspresent = len([x for x in text if x in LIWC["FocusPresent"]])/wordCount * 100
+<<<<<<< HEAD
 
         #tf-idf
         tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')
@@ -409,6 +443,8 @@ def gettingFeatures(plainText):
         print(weights_df.sort_values(by='weight', ascending=False).head(20))
         return
 
+=======
+>>>>>>> a1431cc6ca3e1752670e6055e9db8987f0af4cf3
         #net speak
         #netspeak = 0 #LIWC Analysis
         #Assent
@@ -417,10 +453,14 @@ def gettingFeatures(plainText):
         #nonflu = 0 #LIWC Analysis
 
         #return numpy.array([wordCount,readabilityScore,ReadabilityGrade,DirectionCount,Analytic,Authentic,Tone,WPS,Sixltr,function,pronoun,ppron,i,you,ipron,prep,auxverb,negate,interrog,number,cogproc,cause,discrep,tentat,differ,percept,focuspast,focuspresent,netspeak,assent,nonflu,AllPunc,Comma,QMark,Exemplify])
+<<<<<<< HEAD
+        return [wordCount, readabilityScore, ReadabilityGrade, DirectionCount, WPS, Sixltr, pronoun, ppron, i, you, ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth, Exemplify]
+=======
         return [wordCount, readabilityScore, ReadabilityGrade, DirectionCount, WPS, Sixltr, pronoun, ppron, i, you
         , ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth
         , Exemplify, transitional_words, addition, consequence, contrast_and_Comparison, direction, diversion, emphasis, exception, exemplifying
         , generalizing, illustration, similarity, restatement, sequence, summarizing]
+>>>>>>> a1431cc6ca3e1752670e6055e9db8987f0af4cf3
 
 
 # In[9]:
@@ -433,6 +473,7 @@ xls = xlrd.open_workbook('pliwc.xlsx',"r")
 pxls = xls.sheet_by_name('pliwc')
 textPers = pxls.col_values(1)
 result = gettingFeatures(textPers[110])
+<<<<<<< HEAD
 
 # cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS',
 #         'Sixltr', 'pronoun', 'ppron', 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate', 
@@ -441,5 +482,13 @@ result = gettingFeatures(textPers[110])
 # for i in range(len(result)):
 #     print(cols[i] + ": " + str(result[i]))
 
+=======
+print(result)
+cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS' ,'Sixltr', 'pronoun', 'ppron'
+        , 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate','focuspast', 'focuspresent', 'AllPunc', 'Comma'
+        , 'QMark', 'Colon','Dash','Parenth','Exemplify', 'transitional_words','addition', 'consequence', 'contrast_and_Comparison', 'direction', 'diversion', 'emphasis', 'exception', 'exemplifying'
+        ,'generalizing', 'illustration', 'similarity', 'restatement', 'sequence', 'summarizing']
+
 for i in range(len(result)):
     print(cols[i] + ": " + str(result[i]))
+>>>>>>> a1431cc6ca3e1752670e6055e9db8987f0af4cf3
