@@ -2,26 +2,54 @@
 # coding: utf-8
 import numpy as np
 import re
-from sklearn.externals import joblib
-from textstat.textstat import textstat
-import nltk
-import collections as ct
-from nltk import word_tokenize
-from nltk.tokenize import sent_tokenize
-import xlrd
-import pandas as pd
-from nltk.tokenize import sent_tokenize
-from nltk.tokenize import WordPunctTokenizer
 import json
 import csv
+import string
+import os
+import xlrd
+import pandas as pd
+import nltk
+import collections as ct
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
+from textstat.textstat import textstat
+from nltk import word_tokenize
+from nltk.tokenize import sent_tokenize
+from nltk.tokenize import sent_tokenize
+from nltk.tokenize import WordPunctTokenizer
+from nltk.stem.porter import PorterStemmer
+from nltk.stem import WordNetLemmatizer
+wordnet_lemmatizer = WordNetLemmatizer()
+
 # nltk.download('punkt')
 # nltk.download('averaged_perceptron_tagger')
+nltk.download('wordnet')
 
 
 # In[4]:
+# return a list contains all the texts in our csv file
+def getTexts():
+    xls = xlrd.open_workbook('pliwc.xlsx',"r")
+    pxls = xls.sheet_by_name('pliwc')
+    textPers = pxls.col_values(1)[1:]
+    translator = str.maketrans('', '', string.punctuation)
+    texts = [t.lower().translate(translator) for t in textPers]
+    return texts
+
 
 LIWC_JSON =  open("LIWC2015_Lower_i.json",'r')
 LIWC = json.load(LIWC_JSON)
+ALLTEXTS = getTexts()
+
+# tokenizer for TfidfVectorizer
+def tokenize(text):
+    tokens = nltk.word_tokenize(text)
+    # stems = []
+    lemmas = []
+    for item in tokens:
+        # stems.append(PorterStemmer().stem(item))
+        lemmas.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
+    return lemmas
 
 def gettingFeatures(plainText):
         plainText = plainText.lower()
@@ -78,7 +106,7 @@ def gettingFeatures(plainText):
         
 	#words / syllables / sentences count
         wordCount = len(text)
-        wordCount = 887
+        # wordCount = 1743
         
         try:
             #ReadabilityScore
@@ -143,8 +171,8 @@ def gettingFeatures(plainText):
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
-        print([x for x in text if x in LIWC["You"]])
-        print()
+        # print([x for x in text if x in LIWC["You"]])
+        # print()
         #Impersonal pronoun "one" / "it"
         ipron = 0
         # ipron = (text.count("one") + text.count("it"))/wordCount
@@ -194,6 +222,21 @@ def gettingFeatures(plainText):
         #Verbs present focus VB VBP VBZ VBG
         focuspresent = 0
         focuspresent = len([x for x in text if x in LIWC["FocusPresent"]])/wordCount * 100
+
+        #tf-idf
+        tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')
+        tfs = tfidf.fit_transform(ALLTEXTS)
+
+        response = tfidf.transform([plainText])
+        # feature_names = tfidf.get_feature_names()
+        # for col in response.nonzero()[1]:
+        #     print(feature_names[col], ' - ', response[0, col])
+        # return
+        weights = np.asarray(tfs.mean(axis=0)).ravel().tolist()
+        weights_df = pd.DataFrame({'term': tfidf.get_feature_names(), 'weight': weights})
+        print(weights_df.sort_values(by='weight', ascending=False).head(20))
+        return
+
         #net speak
         #netspeak = 0 #LIWC Analysis
         #Assent
@@ -214,12 +257,12 @@ df2 = xls.sheet_by_name('persuasive')
 xls = xlrd.open_workbook('pliwc.xlsx',"r")
 pxls = xls.sheet_by_name('pliwc')
 textPers = pxls.col_values(1)
-result = gettingFeatures(textPers[34])
+result = gettingFeatures(textPers[110])
 
-cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS',
-        'Sixltr', 'pronoun', 'ppron', 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate', 
-         'focuspast', 'focuspresent', 'AllPunc', 'Comma', 'QMark', 'Colon','Dash','Parenth','Exemplify']
+# cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS',
+#         'Sixltr', 'pronoun', 'ppron', 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate', 
+#          'focuspast', 'focuspresent', 'AllPunc', 'Comma', 'QMark', 'Colon','Dash','Parenth','Exemplify']
 
-for i in range(len(result)):
-    print(cols[i] + ": " + str(result[i]))
+# for i in range(len(result)):
+#     print(cols[i] + ": " + str(result[i]))
 
