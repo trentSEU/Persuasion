@@ -104,6 +104,12 @@ def gettingFeatures(plainText):
         plainText = plainText.replace('\t', ' ')
         text = plainText.split(" ")
         while text.count(''): text.remove('')
+
+        # lemmatization
+        tmp = []
+        for item in text:
+            tmp.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
+        text = tmp
         
 	#words / syllables / sentences count
         wordCount = len(text)
@@ -172,8 +178,6 @@ def gettingFeatures(plainText):
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
-        print([x for x in text if x in LIWC["You"]])
-        print()
         #Impersonal pronoun "one" / "it"
         ipron = 0
         # ipron = (text.count("one") + text.count("it"))/wordCount
