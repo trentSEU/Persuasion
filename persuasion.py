@@ -23,10 +23,11 @@ wordnet_lemmatizer = WordNetLemmatizer()
 
 # nltk.download('punkt')
 # nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
+# nltk.download('wordnet')
 
 
 # In[4]:
+
 # return a list contains all the texts in our csv file
 def getTexts():
     xls = xlrd.open_workbook('pliwc.xlsx',"r")
@@ -35,11 +36,6 @@ def getTexts():
     translator = str.maketrans('', '', string.punctuation)
     texts = [t.lower().translate(translator) for t in textPers]
     return texts
-
-
-LIWC_JSON =  open("LIWC2015_Lower_i.json",'r')
-LIWC = json.load(LIWC_JSON)
-ALLTEXTS = getTexts()
 
 # tokenizer for TfidfVectorizer
 def tokenize(text):
@@ -50,6 +46,11 @@ def tokenize(text):
         # stems.append(PorterStemmer().stem(item))
         lemmas.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
     return lemmas
+
+LIWC_JSON =  open("LIWC2015_Lower_i.json",'r')
+LIWC = json.load(LIWC_JSON)
+ALLTEXTS = getTexts()
+
 
 def gettingFeatures(plainText):
         plainText = plainText.lower()
@@ -171,8 +172,8 @@ def gettingFeatures(plainText):
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
-        # print([x for x in text if x in LIWC["You"]])
-        # print()
+        print([x for x in text if x in LIWC["You"]])
+        print()
         #Impersonal pronoun "one" / "it"
         ipron = 0
         # ipron = (text.count("one") + text.count("it"))/wordCount
@@ -201,10 +202,29 @@ def gettingFeatures(plainText):
         #Count numbers
         number = 0
         number = len([x for x in text if x in LIWC["Number"]])/wordCount * 100
+
+        #tf-idf
+        tfidf = 0
+        tfidfV = TfidfVectorizer(tokenizer=tokenize, stop_words='english', norm=None)
+        tfs = tfidfV.fit_transform(ALLTEXTS)
+
+        response = tfidfV.transform([plainText])
+        feature_names = tfidfV.get_feature_names()
+        for col in response.nonzero()[1]:
+            # print(feature_names[col], ' - ', response[0, col])
+            tfidf += response[0, col]
+        # print(wordCount)
+        # print(tfidf)
+        # return
+        # weights = np.asarray(tfs.mean(axis=0)).ravel().tolist()
+        # weights_df = pd.DataFrame({'term': tfidf.get_feature_names(), 'weight': weights})
+        # print(weights_df.sort_values(by='weight', ascending=False).head(20))
+        # return
         
         ## transitional words
         transitional_words = 0
-        sum_t = 0
+        sum_t1 = 0
+        sum_t2 = 0
 
         t1 = ['also', 'again', 'besides', 'furthermore', 'likewise', 'moreover', 'similarly','accordingly', 'consequently', 'hence', 'otherwise'
         , 'subsequently', 'therefore', 'thus', 'thereupon', 'wherefore','contrast', 'conversely', 'instead', 'likewise', 'rather', 'similarly'
@@ -225,154 +245,183 @@ def gettingFeatures(plainText):
         , 'in conclusion', 'on the whole', 'in short', 'in summary', 'in the final analysis', 'in the long run', 'on balance', 'to sum up', 'to summarize']
         
         for i in t1:
-            sum_t = text.count(i)+ sum_t
+            sum_t1 = text.count(i)+ sum_t1
         for i in t2:
-            sum_t = plainText.count(i)+ sum_t
-        transitional_words = (sum_t/wordCount) * 100
+            sum_t2 = plainText.count(i)+ sum_t2
+        transitional_words = (sum_t1/wordCount) * 100
+        transitional_phrases = sum_t2
 
         #transitional word1: addition
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         addition_1 = ['also', 'again', 'besides', 'furthermore', 'likewise', 'moreover', 'similarly']
         addition_2 = ['as well as', 'coupled with', 'in addition', ]
         for i in  addition_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in addition_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        addition = (sub_sum/wordCount) * 100
-
+            sub_sum2 = plainText.count(i)+ sub_sum2
+        addition_words = (sub_sum1/wordCount) * 100
+        addition_phrases = sub_sum2
+        
         ##transitional word2: consequence
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         consequence_1 = ['accordingly', 'consequently', 'hence', 'otherwise', 'subsequently', 'therefore', 'thus', 'thereupon', 'wherefore']
         consequence_2 = ['as a result', 'for this reason', 'for this purpose', 'so then']
         for i in consequence_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in consequence_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        consequence = (sub_sum/wordCount) * 100
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        consequence_words = (sub_sum1/wordCount) * 100
+        consequence_phrases = sub_sum2
         
         ##transitional word3: contrast_and_Comparison
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         contrast_and_Comparison_1 = ['contrast', 'conversely', 'instead', 'likewise', 'rather', 'similarly', 'yet', 'but', 'however', 'still', 'nevertheless']
         contrast_and_Comparison_2 = ['by the same token', 'on one hand', 'on the other hand', 'on the contrary', 'in contrast']
         for i in contrast_and_Comparison_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1  
         for i in contrast_and_Comparison_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        contrast_and_Comparison = (sub_sum/wordCount) * 100
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        contrast_and_Comparison_words = (sub_sum1/wordCount) * 100
+        contrast_and_Comparison_phrases = sub_sum2
         
         ##transitional word4: direction
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         direction_1 = ['here', 'there', 'beyond', 'nearly', 'opposite', 'under', 'above']
         direction_2 = ['over there', 'to the left', 'to the right', 'in the distance']
         for i in direction_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in direction_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        direction = (sub_sum/wordCount) * 100
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        direction_words = (sub_sum1/wordCount) * 100
+        direction_phrases = sub_sum2
 
         ##transitional word5: diversion
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         diversion_1 = ['incidentally']
         diversion_2 = ['by the way']
         for i in diversion_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in diversion_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        diversion = (sub_sum/wordCount) * 100
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        diversion_words = (sub_sum1/wordCount) * 100
+        diversion_phrases = sub_sum2
 
         ##transitional word6: emphasis
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         emphasis_1 = ['chiefly', 'especially', 'particularly', 'singularly']
         emphasis_2 = ['above all', 'with attention to']
         for i in emphasis_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in emphasis_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        emphasis = (sub_sum/wordCount) * 100   
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        emphasis_words = (sub_sum1/wordCount) * 100 
+        emphasis_phrases = sub_sum2  
 
         ##transitional word7: exception
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         exception_1 = ['barring', 'beside', 'except', 'excepting', 'excluding', 'save']
         exception_2 = ['aside from', 'exclusive of', 'other than', 'outside of']
         for i in exception_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in exception_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        exception = (sub_sum/wordCount) * 100     
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        exception_words = (sub_sum1/wordCount) * 100 
+        exception_phrases = sub_sum2    
 
         ##transitional word8: exemplifying
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         exemplifying_1 = ['chiefly', 'especially', 'markedly', 'namely', 'particularly', 'including' , 'specifically']
         exemplifying_2 = ['for instance', 'in particular', 'such as']
         for i in exemplifying_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in exemplifying_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        exemplifying = (sub_sum/wordCount) * 100  
-
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        exemplifying_words = (sub_sum1/wordCount) * 100 
+        exemplifying_phrases = sub_sum2 
 
         ##transitional word9: generalizing
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         generalizing_1 = ['generally', 'ordinarily', 'usually']
         generalizing_2 = ['as a rule', 'as usual', 'for the most part', 'generally speaking']
         for i in generalizing_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1 
         for i in generalizing_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        generalizing = (sub_sum/wordCount) * 100
+            sub_sum2 = plainText.count(i)+ sub_sum2
+        generalizing_words = (sub_sum1/wordCount) * 100
+        generalizing_phrases = sub_sum2
 
         ##transitional word10: illustration
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         illustration_1 = []
         illustration_2 = ['for example', 'for instance', 'for one thing', 'as an illustration', 'illustrated with', 'as an example', 'in this case']
         for i in illustration_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1
         for i in illustration_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        illustration = (sub_sum/wordCount) * 100 
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        illustration_words = (sub_sum1/wordCount) * 100 
+        illustration_phrases = sub_sum2
 
         ##transitional word11: similarity
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         similarity_1 = ['comparatively', 'correspondingly', 'identically', 'likewise', 'similar', 'moreover']
         similarity_2 = ['coupled with', 'together with']
         for i in similarity_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1
         for i in similarity_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        similarity = (sub_sum/wordCount) * 100 
+            sub_sum2 = plainText.count(i)+ sub_sum2
+        similarity_words = (sub_sum1/wordCount) * 100 
+        similarity_phrases = sub_sum2
 
         ##transitional word12: restatement
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         restatement_1 = ['namely']
         restatement_2 = ['in essence', 'in other words', 'that is', 'that is to say', 'in short', 'in brief', 'to put it differently']
         for i in restatement_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1
         for i in restatement_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        restatement = (sub_sum/wordCount) * 100 
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        restatement_words = (sub_sum1/wordCount) * 100 
+        restatement_phrases = sub_sum2
 
         ##transitional word13: sequence
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         sequence_1 = ['next', 'then', 'soon', 'later', 'while', 'earlier','simultaneously', 'afterward']
         sequence_2 = ['at first', 'first of all', 'to begin with', 'in the first place', 'at the same time', 'for now', 'for the time being'
         , 'the next step', 'in time', 'in turn', 'later on', 'the meantime', 'in conclusion', 'with this in mind']
         for i in sequence_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1
         for i in sequence_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        sequence = (sub_sum/wordCount) * 100
+            sub_sum2 = plainText.count(i)+ sub_sum2
+        sequence_words = (sub_sum1/wordCount) * 100
+        sequence_phrases = sub_sum2
+        
 
         ##transitional word14: summarizing
-        sub_sum = 0
+        sub_sum1 = 0
+        sub_sum2 = 0
         summarizing_1 = ['briefly', 'finally']
         summarizing_2 = [ 'after all', 'all in all', 'all things considered', 'by and large', 'in any case', 'in any event'
         , 'in brief', 'in conclusion', 'on the whole', 'in short', 'in summary', 'in the final analysis', 'in the long run', 'on balance'
         , 'to sum up', 'to summarize']
         for i in summarizing_1:
-            sub_sum = text.count(i)+ sub_sum 
+            sub_sum1 = text.count(i)+ sub_sum1
         for i in summarizing_2:
-            sub_sum = plainText.count(i)+ sub_sum 
-        summarizing = (sub_sum/wordCount) * 100       
+            sub_sum2 = plainText.count(i)+ sub_sum2 
+        summarizing_words = (sub_sum1/wordCount) * 100    
+        summarizing_phrases = sub_sum2    
         
         # prep = len([ (x,y) for x, y in result if y  == "CD" ])/wordCount
         #Cognitive processes
@@ -394,21 +443,6 @@ def gettingFeatures(plainText):
         #Verbs present focus VB VBP VBZ VBG
         focuspresent = 0
         focuspresent = len([x for x in text if x in LIWC["FocusPresent"]])/wordCount * 100
-
-        #tf-idf
-        tfidf = TfidfVectorizer(tokenizer=tokenize, stop_words='english')
-        tfs = tfidf.fit_transform(ALLTEXTS)
-
-        response = tfidf.transform([plainText])
-        # feature_names = tfidf.get_feature_names()
-        # for col in response.nonzero()[1]:
-        #     print(feature_names[col], ' - ', response[0, col])
-        # return
-        weights = np.asarray(tfs.mean(axis=0)).ravel().tolist()
-        weights_df = pd.DataFrame({'term': tfidf.get_feature_names(), 'weight': weights})
-        print(weights_df.sort_values(by='weight', ascending=False).head(20))
-        return
-
         #net speak
         #netspeak = 0 #LIWC Analysis
         #Assent
@@ -419,8 +453,11 @@ def gettingFeatures(plainText):
         #return numpy.array([wordCount,readabilityScore,ReadabilityGrade,DirectionCount,Analytic,Authentic,Tone,WPS,Sixltr,function,pronoun,ppron,i,you,ipron,prep,auxverb,negate,interrog,number,cogproc,cause,discrep,tentat,differ,percept,focuspast,focuspresent,netspeak,assent,nonflu,AllPunc,Comma,QMark,Exemplify])
         return [wordCount, readabilityScore, ReadabilityGrade, DirectionCount, WPS, Sixltr, pronoun, ppron, i, you
         , ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth
-        , Exemplify, transitional_words, addition, consequence, contrast_and_Comparison, direction, diversion, emphasis, exception, exemplifying
-        , generalizing, illustration, similarity, restatement, sequence, summarizing]
+        , Exemplify, tfidf, transitional_words, transitional_phrases, addition_words, addition_phrases, consequence_words, consequence_phrases
+        , contrast_and_Comparison_words, contrast_and_Comparison_phrases, direction_words, direction_phrases, diversion_words, diversion_phrases
+        , emphasis_words, emphasis_phrases, exception_words, exception_phrases, exemplifying_words, exemplifying_phrases, generalizing_words, generalizing_phrases
+        , illustration_words, illustration_phrases, similarity_words, similarity_phrases
+        , restatement_words, restatement_phrases, sequence_words, sequence_phrases,summarizing_words,summarizing_phrases]
 
 
 # In[9]:
@@ -433,13 +470,17 @@ xls = xlrd.open_workbook('pliwc.xlsx',"r")
 pxls = xls.sheet_by_name('pliwc')
 textPers = pxls.col_values(1)
 result = gettingFeatures(textPers[110])
+print(result)
+cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS' ,'Sixltr', 'pronoun', 'ppron'
+        , 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate','focuspast', 'focuspresent', 'AllPunc', 'Comma'
+        , 'QMark', 'Colon','Dash','Parenth','Exemplify', 'tfidf', 'transitional_words', 'transitional_phrases', 'addition_words'
+        , 'addition_phrases', 'consequence_words', 'consequence_phrases', 'contrast_and_Comparison_words'
+        , 'contrast_and_Comparison_phrases', 'direction_words', 'direction_phrases', 'diversion_words', 'diversion_phrases'
+        , 'emphasis_words', 'emphasis_phrases', 'exception_words', 'exception_phrases', 'exemplifying_words'
+        , 'exemplifying_phrases', 'generalizing_words', 'generalizing_phrases', 'illustration_words'
+        , 'illustration_phrases', 'similarity_words', 'similarity_phrases', 'restatement_words'
+        , 'restatement_phrases', 'sequence_words', 'sequence_phrases','summarizing_words','summarizing_phrases']
 
-# cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS',
-#         'Sixltr', 'pronoun', 'ppron', 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate', 
-#          'focuspast', 'focuspresent', 'AllPunc', 'Comma', 'QMark', 'Colon','Dash','Parenth','Exemplify']
-
-# for i in range(len(result)):
-#     print(cols[i] + ": " + str(result[i]))
 
 for i in range(len(result)):
     print(cols[i] + ": " + str(result[i]))
