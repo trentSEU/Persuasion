@@ -50,13 +50,16 @@ def tokenize(plainText):
         lemmas.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
     return lemmas
 
-# Generate a vectorizer for tfidf, then dump the vectorizer for future use
-# Using getTexts(texts) method to preprocess the corpus then call this frunction to generate the vectorizer
+# - Generate a vectorizer for tfidf, then dump the vectorizer for future use
+# - Using getTexts(texts) method to preprocess the corpus then call this frunction to generate the vectorizer
 def tfidfVectorizerGenerator(allText):
     tfidfV = TfidfVectorizer(tokenizer=tokenize, stop_words='english', norm=None)
     tfs = tfidfV.fit_transform(allText)
     pickle.dump(tfidfV, open("vectorizer.pickle", "wb"))
 
+# - This function helps us to get all the machine learning needed features of the given text. 
+# - We use this function to get features for each document in the corpus and save those features 
+#   in a csv file which will be used in models training.
 def gettingFeatures(plainText):
         plainText = plainText.lower()
         syllables = textstat.syllable_count(plainText)

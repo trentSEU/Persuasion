@@ -38,16 +38,13 @@ url = "P_NP_Input.csv"
 dataset = pandas.read_csv(url)
 dataset.apply(pandas.to_numeric)
 
-# shape
+# Shape
 print(dataset.shape)
 
-#Shuffle the dataset
+# Shuffle the dataset
 df = shuffle(dataset)
 
-# head
-# print(df.head(20))
-
-#set training and testing dataset (70-30)
+# Set training and testing dataset (70-30)
 array = df.values
 X = array[:,0:55]
 Y = array[:,55]
@@ -65,7 +62,7 @@ models.append(('CART', DecisionTreeClassifier()))
 models.append(('NB', GaussianNB()))
 models.append(('SVM', SVC()))
 models.append(('RF',RandomForestClassifier()))
-# evaluate each model in turn
+# Evaluate each model in turn
 results = []
 names = []
 for name, model in models:
@@ -92,7 +89,7 @@ predictions = svm.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
 #print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
-#Save the model
+# Save the model
 filename = 'models/SupportVectorMachine.sav'
 joblib.dump(svm, filename)
 
@@ -102,9 +99,8 @@ lr = LogisticRegression()
 lr.fit(X_train, Y_train)
 predictions = lr.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
-#print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
-#Save the model
+# Save the model
 filename = 'models/LogisticRegression.sav'
 joblib.dump(lr, filename)
 
@@ -114,7 +110,6 @@ ld = LinearDiscriminantAnalysis()
 ld.fit(X_train, Y_train)
 predictions = ld.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
-#print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
 #Save the model
 filename = 'models/LinearDiscriminantAnalysis.sav'
@@ -128,7 +123,7 @@ predictions = knn.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
 #print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
-#Save the model
+# Save the model
 filename = 'models/KNeighborsClassifier.sav'
 joblib.dump(knn, filename)
 
@@ -138,9 +133,8 @@ dt = DecisionTreeClassifier()
 dt.fit(X_train, Y_train)
 predictions = dt.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
-#print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
-#Save the model
+# Save the model
 filename = 'models/DecisionTreeClassifier.sav'
 joblib.dump(dt, filename)
 
@@ -150,9 +144,8 @@ nb = GaussianNB()
 nb.fit(X_train, Y_train)
 predictions = nb.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
-#print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
-#Save the model
+# Save the model
 filename = 'models/GaussianNB.sav'
 joblib.dump(nb, filename)
 
@@ -162,9 +155,8 @@ rf = RandomForestClassifier()
 rf.fit(X_train, Y_train)
 predictions = rf.predict(X_validation)
 print(accuracy_score(Y_validation, predictions))
-#print(confusion_matrix(Y_validation, predictions))
 print(classification_report(Y_validation, predictions))
-#Save the model
+# Save the model
 filename = 'models/RandomForest.sav'
 joblib.dump(rf, filename)
 
