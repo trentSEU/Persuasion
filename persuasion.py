@@ -10,6 +10,7 @@ import xlrd
 import pandas as pd
 import nltk
 import collections as ct
+import pickle
 from sklearn.externals import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from textstat.textstat import textstat
@@ -25,42 +26,41 @@ wordnet_lemmatizer = WordNetLemmatizer()
 # nltk.download('averaged_perceptron_tagger')
 # nltk.download('wordnet')
 
-
-# In[4]:
-
-# return a list contains all the texts in our csv file
-def getTexts():
-    xls = xlrd.open_workbook('pliwc.xlsx',"r")
-    pxls = xls.sheet_by_name('pliwc')
-    textPers = pxls.col_values(1)[1:]
+# Return a list contains all the given texts
+def getTexts(texts):
     translator = str.maketrans('', '', string.punctuation)
-    texts = [t.lower().translate(translator) for t in textPers]
+    texts = [str(t).lower().translate(translator) for t in texts]
     return texts
 
 # tokenizer for TfidfVectorizer
-def tokenize(text):
-    tokens = nltk.word_tokenize(text)
-    # stems = []
+def tokenize(plainText):
+    plainText = plainText.lower()
+    punctuation = "!#$%&()*+,-./:;<=>?@[\\]^_`{|}~"
+    for p in punctuation:
+        if p != '\'':
+            plainText = plainText.replace(p, ' ')
+
+    # '\n' would affect the result -> '\n'i, where i is the first word in a paragraph
+    plainText = plainText.replace('\n', ' ')
+    plainText = plainText.replace('\t', ' ')
+    tokens = plainText.split(" ")
+    while tokens.count(''): tokens.remove('')
     lemmas = []
     for item in tokens:
-        # stems.append(PorterStemmer().stem(item))
         lemmas.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
     return lemmas
 
-LIWC_JSON =  open("LIWC2015_Lower_i.json",'r')
-LIWC = json.load(LIWC_JSON)
-ALLTEXTS = getTexts()
-
+# Generate a vectorizer for tfidf, then dump the vectorizer for future use
+# Using getTexts(texts) method to preprocess the corpus then call this frunction to generate the vectorizer
+def tfidfVectorizerGenerator(allText):
+    tfidfV = TfidfVectorizer(tokenizer=tokenize, stop_words='english', norm=None)
+    tfs = tfidfV.fit_transform(allText)
+    pickle.dump(tfidfV, open("vectorizer.pickle", "wb"))
 
 def gettingFeatures(plainText):
         plainText = plainText.lower()
         syllables = textstat.syllable_count(plainText)
-        # sentences = textstat.sentence_count(plainText)
         sentences = len(sent_tokenize(plainText))
-
-        # print(plainText)
-        # print("\nnumber of syllables: " + str(syllables) + "\n")
-        # print("\nnumber of sentences: " + str(len(sentences)) + "\n")
         
         #Count all punctuation
         AllPunc = 0
@@ -70,30 +70,23 @@ def gettingFeatures(plainText):
         for x in cd.values():
             AllPunc = AllPunc + x
         
-        #number of commas
+        # Number of commas
         Comma = 0
         Comma = plainText.count(",")
-        #number of question marks
+        # Number of question marks
         QMark = 0
         QMark = plainText.count("?")
-        #number of colons
+        # Number of colons
         Colon = 0
         Colon = plainText.count(":")
-        #number of dash
+        # Number of dash
         Dash = 0
         Dash = plainText.count("-")
-        #number of dash
+        # Number of Parenth
         Parenth = 0
         Parenth = plainText.count("(") + plainText.count(")")
         
-        #Short version to full words
-        # mapping = [('can\'t', 'can not'), ('let\'s', 'let us'), ('isn\'t', 'is not'), ('i\'m', 'i am'), 
-        #            ('don\'t', 'do not'), ('doesn\'t', 'does not'), ('that\'s' , 'that is'), ('i\'s' , 'it is'), 
-        #            ('i\'ve' , 'i have'), ('wouldn\'t', 'would not'), ('it\'s', 'it is'), ('he\'s', 'he is')] 
-        # for (k, v) in mapping:
-        #     plainText = plainText.replace(k, v)
-        
-        # replace all the punctuations with empty space
+        # Replace all the punctuations with empty space
         punctuation = "!#$%&()*+,-./:;<=>?@[\\]^_`{|}~"
         for p in punctuation:
             if p != '\'':
@@ -104,16 +97,9 @@ def gettingFeatures(plainText):
         plainText = plainText.replace('\t', ' ')
         text = plainText.split(" ")
         while text.count(''): text.remove('')
-
-        # lemmatization
-        tmp = []
-        for item in text:
-            tmp.append(wordnet_lemmatizer.lemmatize(item, pos="v"))
-        text = tmp
         
-	#words / syllables / sentences count
+	    # Total number of words in the text
         wordCount = len(text)
-        # wordCount = 1743
         
         try:
             #ReadabilityScore
@@ -131,11 +117,9 @@ def gettingFeatures(plainText):
         Dash = Dash / wordCount * 100
         Parenth = Parenth / wordCount * 100
         #Direction Count
-        #private String[] direction = {"here", "there", "over there", "beyond", "nearly", "opposite", "under", "above", "to the left", "to the right", "in the distance"};
         DirectionCount  = 0
         DirectionCount = text.count("here") + text.count("there") + plainText.count("over there") + text.count("beyond") + text.count("nearly") + text.count("opposite") + text.count("under") + plainText.count("to the left") + plainText.count("to the right") + plainText.count("in the distance")
         #Exemplify count
-	#private String[] exemplify = {"chiefly", "especially", "for instance", "in particular", "markedly", "namely", "particularly", "including", "specifically", "such as"};
         Exemplify = 0
         Exemplify = text.count("chiefly") + text.count("especially") + plainText.count("for instance") + plainText.count("in particular") + text.count("markedly") + text.count("namely") + text.count("particularly")+ text.count("incluiding") + text.count("specifically") + plainText.count("such as")
         #Analytical thinking
@@ -147,8 +131,6 @@ def gettingFeatures(plainText):
         try:
             #words per sentence (average)
             WPS = 0
-            # parts = [len(l.split()) for l in re.split(r'[?!.]', plainText) if l.strip()]
-            # WPS = sum(parts)/len(parts) #number of words per sentence
             numOfWords = len(text)
             numOfSentences = sentences
             WPS = numOfWords / numOfSentences
@@ -166,15 +148,13 @@ def gettingFeatures(plainText):
         function = 0
         #Pronouns
         pronoun = 0
-        # pronoun = len([ (x,y) for x, y in result if y  == "PRP" or y  == "PRP$"])/wordCount
         pronoun = len([x for x in text if x in LIWC["Pronoun"]])/wordCount * 100
         #Personal pronouns
         ppron = 0
-        # ppron = len([ (x,y) for x, y in result if y  == "PRP" ])/wordCount
         ppron = len([x for x in text if x in LIWC["Ppron"]])/wordCount * 100
         #I
-        i = 0
-        i = len([x for x in text if x in LIWC["i"]])/wordCount * 100
+        feature_i = 0
+        feature_i = len([x for x in text if x in LIWC["i"]])/wordCount * 100
         #You
         you = 0
         you = len([x for x in text if x in LIWC["You"]])/wordCount * 100
@@ -186,20 +166,14 @@ def gettingFeatures(plainText):
         prep = 0
         # prep = len([ (x,y) for x, y in result if y  == "IN" ])/wordCount
         prep = len([x for x in text if x in LIWC["Prep"]])/wordCount * 100
-        #Verb
+        # Verb
         verb = 0
-        text_tokens = word_tokenize(plainText)
-        result = nltk.pos_tag(text_tokens)
-        # verb = len([ (x,y) for x, y in result if y  == "VB" or y  == "VBD" or y  == "VBG" 
-        #                or y  == "VBN" or y  == "VBP" or y  == "VBZ"])/wordCount
         verb = len([x for x in text if x in LIWC["Verb"]])/wordCount * 100
         #Auxiliary verbs do/be/have
         auxverb = 0
-        # auxverb = (text.count("do") + text.count("does") + text.count("don´t") + text.count("doesn´t") + text.count("has") + text.count("have") + text.count("hasn´t")+ text.count("haven´t") + text.count("am") + text.count("are") +  text.count("is") + plainText.count("´m") + plainText.count("´re") +  plainText.count("´s"))/wordCount
         auxverb = len([x for x in text if x in LIWC["Auxverb"]])/wordCount * 100
         #Negations
         negate = 0
-        # negate = text.count("not")/wordCount
         negate = len([x for x in text if x in LIWC["Negate"]])/wordCount * 100
         #Count interrogatives
         #interrog = 0 #LICW Analysis
@@ -209,23 +183,12 @@ def gettingFeatures(plainText):
 
         #tf-idf
         tfidf = 0
-        tfidfV = TfidfVectorizer(tokenizer=tokenize, stop_words='english', norm=None)
-        tfs = tfidfV.fit_transform(ALLTEXTS)
-
         response = tfidfV.transform([plainText])
         feature_names = tfidfV.get_feature_names()
         for col in response.nonzero()[1]:
-            # print(feature_names[col], ' - ', response[0, col])
             tfidf += response[0, col]
-        # print(wordCount)
-        # print(tfidf)
-        # return
-        # weights = np.asarray(tfs.mean(axis=0)).ravel().tolist()
-        # weights_df = pd.DataFrame({'term': tfidf.get_feature_names(), 'weight': weights})
-        # print(weights_df.sort_values(by='weight', ascending=False).head(20))
-        # return
         
-        ## transitional words
+        # Transitional words
         transitional_words = 0
         sum_t1 = 0
         sum_t2 = 0
@@ -255,7 +218,7 @@ def gettingFeatures(plainText):
         transitional_words = (sum_t1/wordCount) * 100
         transitional_phrases = sum_t2
 
-        #transitional word1: addition
+        # Transitional word1: addition
         sub_sum1 = 0
         sub_sum2 = 0
         addition_1 = ['also', 'again', 'besides', 'furthermore', 'likewise', 'moreover', 'similarly']
@@ -267,7 +230,7 @@ def gettingFeatures(plainText):
         addition_words = (sub_sum1/wordCount) * 100
         addition_phrases = sub_sum2
         
-        ##transitional word2: consequence
+        # Transitional word2: consequence
         sub_sum1 = 0
         sub_sum2 = 0
         consequence_1 = ['accordingly', 'consequently', 'hence', 'otherwise', 'subsequently', 'therefore', 'thus', 'thereupon', 'wherefore']
@@ -279,7 +242,7 @@ def gettingFeatures(plainText):
         consequence_words = (sub_sum1/wordCount) * 100
         consequence_phrases = sub_sum2
         
-        ##transitional word3: contrast_and_Comparison
+        # Transitional word3: contrast_and_Comparison
         sub_sum1 = 0
         sub_sum2 = 0
         contrast_and_Comparison_1 = ['contrast', 'conversely', 'instead', 'likewise', 'rather', 'similarly', 'yet', 'but', 'however', 'still', 'nevertheless']
@@ -291,7 +254,7 @@ def gettingFeatures(plainText):
         contrast_and_Comparison_words = (sub_sum1/wordCount) * 100
         contrast_and_Comparison_phrases = sub_sum2
         
-        ##transitional word4: direction
+        # Transitional word4: direction
         sub_sum1 = 0
         sub_sum2 = 0
         direction_1 = ['here', 'there', 'beyond', 'nearly', 'opposite', 'under', 'above']
@@ -303,7 +266,7 @@ def gettingFeatures(plainText):
         direction_words = (sub_sum1/wordCount) * 100
         direction_phrases = sub_sum2
 
-        ##transitional word5: diversion
+        # Transitional word5: diversion
         sub_sum1 = 0
         sub_sum2 = 0
         diversion_1 = ['incidentally']
@@ -315,7 +278,7 @@ def gettingFeatures(plainText):
         diversion_words = (sub_sum1/wordCount) * 100
         diversion_phrases = sub_sum2
 
-        ##transitional word6: emphasis
+        # Transitional word6: emphasis
         sub_sum1 = 0
         sub_sum2 = 0
         emphasis_1 = ['chiefly', 'especially', 'particularly', 'singularly']
@@ -327,7 +290,7 @@ def gettingFeatures(plainText):
         emphasis_words = (sub_sum1/wordCount) * 100 
         emphasis_phrases = sub_sum2  
 
-        ##transitional word7: exception
+        # Transitional word7: exception
         sub_sum1 = 0
         sub_sum2 = 0
         exception_1 = ['barring', 'beside', 'except', 'excepting', 'excluding', 'save']
@@ -339,7 +302,7 @@ def gettingFeatures(plainText):
         exception_words = (sub_sum1/wordCount) * 100 
         exception_phrases = sub_sum2    
 
-        ##transitional word8: exemplifying
+        # Transitional word8: exemplifying
         sub_sum1 = 0
         sub_sum2 = 0
         exemplifying_1 = ['chiefly', 'especially', 'markedly', 'namely', 'particularly', 'including' , 'specifically']
@@ -351,7 +314,7 @@ def gettingFeatures(plainText):
         exemplifying_words = (sub_sum1/wordCount) * 100 
         exemplifying_phrases = sub_sum2 
 
-        ##transitional word9: generalizing
+        # Transitional word9: generalizing
         sub_sum1 = 0
         sub_sum2 = 0
         generalizing_1 = ['generally', 'ordinarily', 'usually']
@@ -363,7 +326,7 @@ def gettingFeatures(plainText):
         generalizing_words = (sub_sum1/wordCount) * 100
         generalizing_phrases = sub_sum2
 
-        ##transitional word10: illustration
+        # Transitional word10: illustration
         sub_sum1 = 0
         sub_sum2 = 0
         illustration_1 = []
@@ -375,7 +338,7 @@ def gettingFeatures(plainText):
         illustration_words = (sub_sum1/wordCount) * 100 
         illustration_phrases = sub_sum2
 
-        ##transitional word11: similarity
+        # Transitional word11: similarity
         sub_sum1 = 0
         sub_sum2 = 0
         similarity_1 = ['comparatively', 'correspondingly', 'identically', 'likewise', 'similar', 'moreover']
@@ -387,7 +350,7 @@ def gettingFeatures(plainText):
         similarity_words = (sub_sum1/wordCount) * 100 
         similarity_phrases = sub_sum2
 
-        ##transitional word12: restatement
+        # Ransitional word12: restatement
         sub_sum1 = 0
         sub_sum2 = 0
         restatement_1 = ['namely']
@@ -399,7 +362,7 @@ def gettingFeatures(plainText):
         restatement_words = (sub_sum1/wordCount) * 100 
         restatement_phrases = sub_sum2
 
-        ##transitional word13: sequence
+        # Transitional word13: sequence
         sub_sum1 = 0
         sub_sum2 = 0
         sequence_1 = ['next', 'then', 'soon', 'later', 'while', 'earlier','simultaneously', 'afterward']
@@ -413,7 +376,7 @@ def gettingFeatures(plainText):
         sequence_phrases = sub_sum2
         
 
-        ##transitional word14: summarizing
+        # Transitional word14: summarizing
         sub_sum1 = 0
         sub_sum2 = 0
         summarizing_1 = ['briefly', 'finally']
@@ -454,8 +417,7 @@ def gettingFeatures(plainText):
         #Non fluencies
         #nonflu = 0 #LIWC Analysis
 
-        #return numpy.array([wordCount,readabilityScore,ReadabilityGrade,DirectionCount,Analytic,Authentic,Tone,WPS,Sixltr,function,pronoun,ppron,i,you,ipron,prep,auxverb,negate,interrog,number,cogproc,cause,discrep,tentat,differ,percept,focuspast,focuspresent,netspeak,assent,nonflu,AllPunc,Comma,QMark,Exemplify])
-        return [wordCount, readabilityScore, ReadabilityGrade, DirectionCount, WPS, Sixltr, pronoun, ppron, i, you
+        return [wordCount, readabilityScore, ReadabilityGrade, DirectionCount, WPS, Sixltr, pronoun, ppron, feature_i, you
         , ipron, prep, verb, auxverb, negate, focuspast, focuspresent, AllPunc, Comma, QMark, Colon, Dash, Parenth
         , Exemplify, tfidf, transitional_words, transitional_phrases, addition_words, addition_phrases, consequence_words, consequence_phrases
         , contrast_and_Comparison_words, contrast_and_Comparison_phrases, direction_words, direction_phrases, diversion_words, diversion_phrases
@@ -463,19 +425,24 @@ def gettingFeatures(plainText):
         , illustration_words, illustration_phrases, similarity_words, similarity_phrases
         , restatement_words, restatement_phrases, sequence_words, sequence_phrases,summarizing_words,summarizing_phrases]
 
+LIWC_JSON = open("LIWC2015_Lower_i.json",'r')
+LIWC = json.load(LIWC_JSON)
+tfidfV = pickle.load(open("vectorizer.pickle", "rb")) # Vectorizer used for TfIdf calculation
 
-# In[9]:
-
+xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
 xls = xlrd.open_workbook('test_daniela_python.xlsx',"r")
 df1 = xls.sheet_by_name('nppersuasive')
 df2 = xls.sheet_by_name('persuasive')
 
-xls = xlrd.open_workbook('pliwc.xlsx',"r")
-pxls = xls.sheet_by_name('pliwc')
-textPers = pxls.col_values(1)
-result = gettingFeatures(textPers[110])
-print(result)
-cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS' ,'Sixltr', 'pronoun', 'ppron'
+textNPers = df1.col_values(0)[1:]
+textPers = df2.col_values(0)[1:]
+
+alltexts = textNPers[:]
+alltexts.extend(textPers)
+ALLTEXTS = getTexts(alltexts)
+
+# Feature names
+cols = ['text', 'wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', 'WPS' ,'Sixltr', 'pronoun', 'ppron'
         , 'i', 'you', 'ipron', 'prep','verb','auxverb', 'negate','focuspast', 'focuspresent', 'AllPunc', 'Comma'
         , 'QMark', 'Colon','Dash','Parenth','Exemplify', 'tfidf', 'transitional_words', 'transitional_phrases', 'addition_words'
         , 'addition_phrases', 'consequence_words', 'consequence_phrases', 'contrast_and_Comparison_words'
@@ -483,8 +450,35 @@ cols = ['wordCount', 'readabilityScore', 'ReadabilityGrade', 'DirectionCount', '
         , 'emphasis_words', 'emphasis_phrases', 'exception_words', 'exception_phrases', 'exemplifying_words'
         , 'exemplifying_phrases', 'generalizing_words', 'generalizing_phrases', 'illustration_words'
         , 'illustration_phrases', 'similarity_words', 'similarity_phrases', 'restatement_words'
-        , 'restatement_phrases', 'sequence_words', 'sequence_phrases','summarizing_words','summarizing_phrases']
+        , 'restatement_phrases', 'sequence_words', 'sequence_phrases','summarizing_words','summarizing_phrases', 'persuasion']
 
-
-for i in range(len(result)):
-    print(cols[i] + ": " + str(result[i]))
+# Getting the given texts' features and save in a csv file
+count_item = 1
+with open('P_NP_Output.csv', mode='w') as csvfile:
+    csvfile.write(','.join(cols))
+    for t in textNPers:
+        rowList = [""] * len(cols)
+        features = gettingFeatures(str(t))
+        for i in range(len(features)):
+            rowList[i + 1] = str(features[i])
+        text = str(t).replace("\"", "\"\"")
+        text = "\"" + text + "\""
+        rowList[0] = text
+        rowList[len(cols) - 1] = "0" # 0 for non-persuasive
+        csvfile.write("\n" + ','.join(rowList))
+        if count_item % 20 == 0:
+            print(count_item)
+        count_item += 1
+    for t in textPers:
+        rowList = [""] * len(cols)
+        features = gettingFeatures(str(t))
+        for i in range(len(features)):
+            rowList[i + 1] = str(features[i])
+        text = str(t).replace("\"", "\"\"")
+        text = "\"" + text + "\""
+        rowList[0] = text
+        rowList[len(cols) - 1] = "1" # 1 for non-persuasive
+        csvfile.write("\n" + ','.join(rowList))
+        if count_item % 20 == 0:
+            print(count_item)
+        count_item += 1
